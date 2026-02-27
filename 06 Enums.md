@@ -1,231 +1,580 @@
-## Day 6 — Enums
+## Day 6 — Enums (Used Everywhere: VehicleType, PaymentStatus, OrderStatus)
 
-Enums (enumerations) are a special data type in Java that define a fixed set of constants. They are used extensively in low-level design to represent a fixed collection of related values, such as vehicle types, payment statuses, order statuses, days of the week, etc.
+Enums (short for enumerations) are a special Java type used to define a fixed set of constants. They are incredibly useful in Low-Level Design for representing things like types, statuses, categories, and options. Enums make code more readable, type-safe, and less error-prone than using strings or integers.
 
-### Why Use Enums?
+---
 
-- **Type safety**: You cannot assign a value outside the predefined set.
-- **Readability**: Code becomes self‑documenting (`OrderStatus.PAID` is clearer than `"PAID"` or `1`).
-- **Compile‑time checking**: The compiler catches invalid values.
-- **Rich behavior**: Enums can have fields, constructors, and methods, allowing you to associate additional data with each constant.
+### 1. What is an Enum?
 
-### Common Use Cases
+An enum is a class that represents a group of constants (unchangeable variables, like final variables). In Java, enums are more powerful than in many other languages – they can have fields, constructors, methods, and even implement interfaces.
 
-- `VehicleType` – CAR, BIKE, TRUCK
-- `PaymentStatus` – PENDING, PAID, FAILED, REFUNDED
-- `OrderStatus` – NEW, PROCESSING, SHIPPED, DELIVERED, CANCELLED
-- `DayOfWeek` – MONDAY, TUESDAY, …
-- `Direction` – NORTH, SOUTH, EAST, WEST
+**Why use enums?**
+- **Type safety**: You can't assign an invalid value (e.g., passing `"PENDING"` instead of `"PENDING"` – actually you can with strings, but enums prevent typos at compile time).
+- **Readability**: Code like `order.setStatus(OrderStatus.CONFIRMED)` is self-documenting.
+- **Centralized definition**: All allowed values are defined in one place.
+- **Can have behavior**: Enums can have methods, making them more than just constants.
 
-### Problem Statement
+---
 
-Design a simple order processing system that uses enums to represent order status and payment status. Additionally, use an enum for vehicle types to categorize orders based on the type of vehicle involved.
-
-1. Create an enum **`OrderStatus`** with constants: `NEW`, `PROCESSING`, `SHIPPED`, `DELIVERED`, `CANCELLED`. Each constant should have a display name (e.g., "New Order", "Processing", etc.) and a method `canCancel()` that returns `true` if the order can be cancelled (i.e., only `NEW` and `PROCESSING` are cancellable).
-
-2. Create an enum **`PaymentStatus`** with constants: `PENDING`, `PAID`, `FAILED`. Each constant should have a display name and a method `isSuccessful()` that returns `true` only for `PAID`.
-
-3. Create an enum **`VehicleType`** with constants: `CAR`, `BIKE`, `TRUCK`. Each constant should have a `maxSpeed` value (in km/h) associated: CAR = 200, BIKE = 120, TRUCK = 140.
-
-4. Create a class **`Order`** that has:
-   - Fields: `orderId` (int), `vehicleType` (VehicleType), `status` (OrderStatus), `paymentStatus` (PaymentStatus).
-   - Constructor to initialize all fields (default status = NEW, paymentStatus = PENDING).
-   - Methods to update status and payment status (with validation, e.g., cannot mark as PAID if already PAID, cannot ship if not PAID).
-   - Override `toString()` to display order details.
-
-5. In a main class, create a few orders, simulate status changes, and demonstrate enum usage.
-
-### Java Solution
+### 2. Basic Enum Definition
 
 ```java
-// Enum for OrderStatus with display name and cancel check
-enum OrderStatus {
-    NEW("New Order"),
-    PROCESSING("Processing"),
-    SHIPPED("Shipped"),
-    DELIVERED("Delivered"),
-    CANCELLED("Cancelled");
+public enum Day {
+    SUNDAY, MONDAY, TUESDAY, WEDNESDAY, THURSDAY, FRIDAY, SATURDAY
+}
+```
+
+Usage:
+```java
+Day today = Day.MONDAY;
+System.out.println(today); // MONDAY
+```
+
+---
+
+### 3. Enums with Fields, Constructors, and Methods
+
+Enums can have fields, constructors, and methods. Each enum constant is an instance of the enum class, and you can pass parameters to the constructor.
+
+**Example: `VehicleType` enum with description and wheels count**
+```java
+public enum VehicleType {
+    CAR("Car", 4),
+    BIKE("Bike", 2),
+    TRUCK("Truck", 6),
+    BUS("Bus", 6);
 
     private final String displayName;
+    private final int wheels;
 
-    OrderStatus(String displayName) {
+    // Constructor – called once per constant
+    VehicleType(String displayName, int wheels) {
         this.displayName = displayName;
+        this.wheels = wheels;
     }
 
     public String getDisplayName() {
         return displayName;
     }
 
-    public boolean canCancel() {
-        return this == NEW || this == PROCESSING;
-    }
-}
-
-// Enum for PaymentStatus with display name and success check
-enum PaymentStatus {
-    PENDING("Pending"),
-    PAID("Paid"),
-    FAILED("Failed");
-
-    private final String displayName;
-
-    PaymentStatus(String displayName) {
-        this.displayName = displayName;
-    }
-
-    public String getDisplayName() {
-        return displayName;
-    }
-
-    public boolean isSuccessful() {
-        return this == PAID;
-    }
-}
-
-// Enum for VehicleType with max speed
-enum VehicleType {
-    CAR(200),
-    BIKE(120),
-    TRUCK(140);
-
-    private final int maxSpeed;
-
-    VehicleType(int maxSpeed) {
-        this.maxSpeed = maxSpeed;
-    }
-
-    public int getMaxSpeed() {
-        return maxSpeed;
-    }
-}
-
-// Order class
-class Order {
-    private final int orderId;
-    private VehicleType vehicleType;
-    private OrderStatus status;
-    private PaymentStatus paymentStatus;
-
-    public Order(int orderId, VehicleType vehicleType) {
-        this.orderId = orderId;
-        this.vehicleType = vehicleType;
-        this.status = OrderStatus.NEW;           // default
-        this.paymentStatus = PaymentStatus.PENDING; // default
-    }
-
-    // Update order status with validation
-    public void updateStatus(OrderStatus newStatus) {
-        // Example validations
-        if (this.status == OrderStatus.CANCELLED) {
-            System.out.println("Order already cancelled. No further updates.");
-            return;
-        }
-        if (this.status == OrderStatus.DELIVERED) {
-            System.out.println("Order already delivered. Cannot change status.");
-            return;
-        }
-        // Can't ship if payment not successful
-        if (newStatus == OrderStatus.SHIPPED && !paymentStatus.isSuccessful()) {
-            System.out.println("Cannot ship order: payment not successful.");
-            return;
-        }
-        this.status = newStatus;
-        System.out.println("Order " + orderId + " status updated to " + status.getDisplayName());
-    }
-
-    // Update payment status
-    public void updatePaymentStatus(PaymentStatus newPaymentStatus) {
-        if (this.paymentStatus == PaymentStatus.PAID) {
-            System.out.println("Payment already completed. Cannot change.");
-            return;
-        }
-        this.paymentStatus = newPaymentStatus;
-        System.out.println("Order " + orderId + " payment status: " + paymentStatus.getDisplayName());
-    }
-
-    // Cancel order if allowed
-    public void cancelOrder() {
-        if (status.canCancel()) {
-            this.status = OrderStatus.CANCELLED;
-            System.out.println("Order " + orderId + " cancelled.");
-        } else {
-            System.out.println("Order " + orderId + " cannot be cancelled at " + status.getDisplayName() + " stage.");
-        }
+    public int getWheels() {
+        return wheels;
     }
 
     @Override
     public String toString() {
-        return String.format("Order #%d [Vehicle: %s, Max Speed: %d km/h, Status: %s, Payment: %s]",
-                orderId, vehicleType, vehicleType.getMaxSpeed(),
-                status.getDisplayName(), paymentStatus.getDisplayName());
+        return displayName;
     }
 }
+```
 
-// Demo class
-public class EnumDemo {
+**Usage:**
+```java
+VehicleType type = VehicleType.CAR;
+System.out.println(type.getDisplayName()); // Car
+System.out.println(type.getWheels());      // 4
+System.out.println(type);                  // Car (because toString is overridden)
+```
+
+---
+
+### 4. Important Enum Methods
+
+All enums implicitly extend `java.lang.Enum` and have these useful methods:
+
+- `name()` – returns the exact string used to declare the enum constant.
+- `ordinal()` – returns the position (0-based) of the constant in the enum declaration.
+- `valueOf(Class<T> enumType, String name)` – returns the enum constant with the specified name.
+- `values()` – returns an array of all enum constants (implicitly added by compiler).
+
+```java
+VehicleType[] types = VehicleType.values();
+for (VehicleType vt : types) {
+    System.out.println(vt.name() + " : " + vt.ordinal());
+}
+// Output:
+// CAR : 0
+// BIKE : 1
+// TRUCK : 2
+// BUS : 3
+```
+
+**Parsing from string:**
+```java
+VehicleType type = VehicleType.valueOf("CAR"); // returns VehicleType.CAR
+// Throws IllegalArgumentException if name doesn't match
+```
+
+---
+
+### 5. Using Enums in Switch Statements
+
+Enums work beautifully with switch statements.
+
+```java
+public class ParkingLot {
+    public double calculateFee(VehicleType type, int hours) {
+        switch (type) {
+            case CAR:
+                return hours * 10.0;
+            case BIKE:
+                return hours * 5.0;
+            case TRUCK:
+            case BUS:
+                return hours * 20.0;
+            default:
+                throw new IllegalArgumentException("Unknown type");
+        }
+    }
+}
+```
+
+---
+
+### 6. Enums with Abstract Methods (Strategy-like Behavior)
+
+You can define abstract methods in an enum and override them per constant. This is useful when behavior varies per constant.
+
+**Example: `PaymentStatus` with next status transition**
+```java
+public enum PaymentStatus {
+    PENDING {
+        @Override
+        public PaymentStatus next() {
+            return COMPLETED;
+        }
+    },
+    COMPLETED {
+        @Override
+        public PaymentStatus next() {
+            return REFUNDED;
+        }
+    },
+    REFUNDED {
+        @Override
+        public PaymentStatus next() {
+            return REFUNDED; // terminal state
+        }
+    },
+    FAILED {
+        @Override
+        public PaymentStatus next() {
+            return FAILED; // terminal
+        }
+    };
+
+    public abstract PaymentStatus next();
+}
+```
+
+**Usage:**
+```java
+PaymentStatus status = PaymentStatus.PENDING;
+System.out.println(status.next()); // COMPLETED
+System.out.println(status.next().next()); // REFUNDED
+```
+
+This is similar to the State pattern but implemented in an enum. For simple state machines, enums with methods are very handy.
+
+---
+
+### 7. Enums Implementing Interfaces
+
+Enums can implement interfaces, allowing them to be used polymorphically.
+
+**Example: `OrderStatus` implementing a `Cancellable` interface**
+```java
+interface Cancellable {
+    boolean canCancel();
+}
+
+public enum OrderStatus implements Cancellable {
+    NEW {
+        @Override
+        public boolean canCancel() {
+            return true;
+        }
+    },
+    CONFIRMED {
+        @Override
+        public boolean canCancel() {
+            return true;
+        }
+    },
+    SHIPPED {
+        @Override
+        public boolean canCancel() {
+            return false;
+        }
+    },
+    DELIVERED {
+        @Override
+        public boolean canCancel() {
+            return false;
+        }
+    },
+    CANCELLED {
+        @Override
+        public boolean canCancel() {
+            return false;
+        }
+    };
+
+    // You can also provide a default implementation
+    // public boolean canCancel() { return false; }
+}
+```
+
+**Usage:**
+```java
+OrderStatus status = OrderStatus.NEW;
+if (status.canCancel()) {
+    System.out.println("Order can be cancelled.");
+}
+```
+
+---
+
+### 8. EnumSet and EnumMap
+
+Java provides specialized collections for enums: `EnumSet` and `EnumMap`. They are highly efficient.
+
+- **EnumSet**: A `Set` implementation for enums. All elements must come from a single enum type.
+- **EnumMap**: A `Map` implementation where keys are enums.
+
+**Example:**
+```java
+// EnumSet
+EnumSet<VehicleType> heavyVehicles = EnumSet.of(VehicleType.TRUCK, VehicleType.BUS);
+if (heavyVehicles.contains(VehicleType.TRUCK)) {
+    System.out.println("Truck is a heavy vehicle.");
+}
+
+// EnumMap
+EnumMap<VehicleType, Integer> parkingSpots = new EnumMap<>(VehicleType.class);
+parkingSpots.put(VehicleType.CAR, 100);
+parkingSpots.put(VehicleType.BIKE, 50);
+int carSpots = parkingSpots.get(VehicleType.CAR);
+```
+
+---
+
+### 9. Practical LLD Examples
+
+Let's see how enums are used in typical LLD problems.
+
+#### a) Parking Lot System – VehicleType and PaymentStatus
+
+```java
+public enum VehicleType {
+    CAR, BIKE, TRUCK
+}
+
+public enum PaymentStatus {
+    PENDING, COMPLETED, FAILED, REFUNDED
+}
+
+public class ParkingTicket {
+    private String ticketId;
+    private VehicleType vehicleType;
+    private long entryTime;
+    private PaymentStatus paymentStatus;
+
+    // constructor, getters, setters
+}
+```
+
+#### b) Order Management – OrderStatus
+
+```java
+public enum OrderStatus {
+    PLACED, CONFIRMED, PROCESSING, SHIPPED, DELIVERED, CANCELLED
+}
+
+public class Order {
+    private int orderId;
+    private OrderStatus status;
+    // ...
+}
+```
+
+#### c) Vending Machine – State as Enum (simpler alternative to State pattern)
+
+```java
+public enum VendingMachineState {
+    IDLE, SELECTING, DISPENSING, OUT_OF_ORDER
+}
+
+public class VendingMachine {
+    private VendingMachineState state;
+    // ...
+}
+```
+
+---
+
+### 10. File Structure for Demo Project
+
+Let's create a small project demonstrating enums with `VehicleType`, `PaymentStatus`, and `OrderStatus`. We'll include a main class to show usage.
+
+```
+Day06-Enums/
+├── src/
+│   └── com/
+│       └── example/
+│           └── enumsdemo/
+│               ├── VehicleType.java
+│               ├── PaymentStatus.java
+│               ├── OrderStatus.java
+│               ├── ParkingTicket.java
+│               ├── Order.java
+│               └── Main.java
+└── README.md
+```
+
+#### VehicleType.java
+```java
+package com.example.enumsdemo;
+
+public enum VehicleType {
+    CAR("Car", 4),
+    BIKE("Bike", 2),
+    TRUCK("Truck", 6),
+    BUS("Bus", 6);
+
+    private final String displayName;
+    private final int wheels;
+
+    VehicleType(String displayName, int wheels) {
+        this.displayName = displayName;
+        this.wheels = wheels;
+    }
+
+    public String getDisplayName() { return displayName; }
+    public int getWheels() { return wheels; }
+
+    @Override
+    public String toString() { return displayName; }
+}
+```
+
+#### PaymentStatus.java
+```java
+package com.example.enumsdemo;
+
+public enum PaymentStatus {
+    PENDING {
+        @Override
+        public PaymentStatus next() {
+            return COMPLETED;
+        }
+    },
+    COMPLETED {
+        @Override
+        public PaymentStatus next() {
+            return REFUNDED;
+        }
+    },
+    REFUNDED {
+        @Override
+        public PaymentStatus next() {
+            return REFUNDED;
+        }
+    },
+    FAILED {
+        @Override
+        public PaymentStatus next() {
+            return FAILED;
+        }
+    };
+
+    public abstract PaymentStatus next();
+}
+```
+
+#### OrderStatus.java
+```java
+package com.example.enumsdemo;
+
+interface Cancellable {
+    boolean canCancel();
+}
+
+public enum OrderStatus implements Cancellable {
+    PLACED {
+        @Override
+        public boolean canCancel() { return true; }
+    },
+    CONFIRMED {
+        @Override
+        public boolean canCancel() { return true; }
+    },
+    PROCESSING {
+        @Override
+        public boolean canCancel() { return false; }
+    },
+    SHIPPED {
+        @Override
+        public boolean canCancel() { return false; }
+    },
+    DELIVERED {
+        @Override
+        public boolean canCancel() { return false; }
+    },
+    CANCELLED {
+        @Override
+        public boolean canCancel() { return false; }
+    };
+}
+```
+
+#### ParkingTicket.java
+```java
+package com.example.enumsdemo;
+
+import java.time.Instant;
+
+public class ParkingTicket {
+    private String ticketId;
+    private VehicleType vehicleType;
+    private Instant entryTime;
+    private PaymentStatus paymentStatus;
+
+    public ParkingTicket(String ticketId, VehicleType vehicleType) {
+        this.ticketId = ticketId;
+        this.vehicleType = vehicleType;
+        this.entryTime = Instant.now();
+        this.paymentStatus = PaymentStatus.PENDING;
+    }
+
+    // getters and setters
+    public String getTicketId() { return ticketId; }
+    public VehicleType getVehicleType() { return vehicleType; }
+    public Instant getEntryTime() { return entryTime; }
+    public PaymentStatus getPaymentStatus() { return paymentStatus; }
+    public void setPaymentStatus(PaymentStatus paymentStatus) { this.paymentStatus = paymentStatus; }
+
+    @Override
+    public String toString() {
+        return "ParkingTicket{" +
+                "ticketId='" + ticketId + '\'' +
+                ", vehicleType=" + vehicleType +
+                ", entryTime=" + entryTime +
+                ", paymentStatus=" + paymentStatus +
+                '}';
+    }
+}
+```
+
+#### Order.java
+```java
+package com.example.enumsdemo;
+
+public class Order {
+    private int orderId;
+    private OrderStatus status;
+
+    public Order(int orderId) {
+        this.orderId = orderId;
+        this.status = OrderStatus.PLACED;
+    }
+
+    public int getOrderId() { return orderId; }
+    public OrderStatus getStatus() { return status; }
+    public void setStatus(OrderStatus status) { this.status = status; }
+
+    public boolean canCancel() {
+        return status.canCancel();
+    }
+
+    @Override
+    public String toString() {
+        return "Order{orderId=" + orderId + ", status=" + status + '}';
+    }
+}
+```
+
+#### Main.java
+```java
+package com.example.enumsdemo;
+
+public class Main {
     public static void main(String[] args) {
-        // Create orders
-        Order order1 = new Order(1001, VehicleType.CAR);
-        Order order2 = new Order(1002, VehicleType.BIKE);
-        Order order3 = new Order(1003, VehicleType.TRUCK);
+        // VehicleType demo
+        System.out.println("=== VehicleType Demo ===");
+        for (VehicleType vt : VehicleType.values()) {
+            System.out.println(vt + " has " + vt.getWheels() + " wheels.");
+        }
 
-        // Display initial orders
-        System.out.println("=== Initial Orders ===");
-        System.out.println(order1);
-        System.out.println(order2);
-        System.out.println(order3);
-        System.out.println();
+        // PaymentStatus demo with next()
+        System.out.println("\n=== PaymentStatus Demo ===");
+        PaymentStatus status = PaymentStatus.PENDING;
+        System.out.println("Current: " + status);
+        System.out.println("Next: " + status.next());
+        System.out.println("Next after next: " + status.next().next());
 
-        // Simulate workflow
-        order1.updatePaymentStatus(PaymentStatus.PAID);
-        order1.updateStatus(OrderStatus.PROCESSING);
-        order1.updateStatus(OrderStatus.SHIPPED);
-        order1.updateStatus(OrderStatus.DELIVERED);
-        System.out.println(order1);
-        System.out.println();
+        // Order demo with canCancel()
+        System.out.println("\n=== Order Demo ===");
+        Order order = new Order(1001);
+        System.out.println(order);
+        System.out.println("Can cancel? " + order.canCancel());
 
-        order2.cancelOrder();   // NEW can cancel
-        System.out.println(order2);
-        System.out.println();
+        order.setStatus(OrderStatus.PROCESSING);
+        System.out.println(order);
+        System.out.println("Can cancel? " + order.canCancel());
 
-        order3.updateStatus(OrderStatus.SHIPPED); // Should fail because payment not paid
-        order3.updatePaymentStatus(PaymentStatus.PAID);
-        order3.updateStatus(OrderStatus.SHIPPED);
-        order3.cancelOrder();   // SHIPPED cannot cancel
-        System.out.println(order3);
+        // ParkingTicket demo
+        System.out.println("\n=== ParkingTicket Demo ===");
+        ParkingTicket ticket = new ParkingTicket("T123", VehicleType.CAR);
+        System.out.println(ticket);
+        ticket.setPaymentStatus(PaymentStatus.COMPLETED);
+        System.out.println("After payment: " + ticket.getPaymentStatus());
     }
 }
 ```
 
-**Output:**
-
+**Expected Output:**
 ```
-=== Initial Orders ===
-Order #1001 [Vehicle: CAR, Max Speed: 200 km/h, Status: New Order, Payment: Pending]
-Order #1002 [Vehicle: BIKE, Max Speed: 120 km/h, Status: New Order, Payment: Pending]
-Order #1003 [Vehicle: TRUCK, Max Speed: 140 km/h, Status: New Order, Payment: Pending]
+=== VehicleType Demo ===
+Car has 4 wheels.
+Bike has 2 wheels.
+Truck has 6 wheels.
+Bus has 6 wheels.
 
-Order 1001 payment status: Paid
-Order 1001 status updated to Processing
-Order 1001 status updated to Shipped
-Order 1001 status updated to Delivered
-Order #1001 [Vehicle: CAR, Max Speed: 200 km/h, Status: Delivered, Payment: Paid]
+=== PaymentStatus Demo ===
+Current: PENDING
+Next: COMPLETED
+Next after next: REFUNDED
 
-Order 1002 cancelled.
-Order #1002 [Vehicle: BIKE, Max Speed: 120 km/h, Status: Cancelled, Payment: Pending]
+=== Order Demo ===
+Order{orderId=1001, status=PLACED}
+Can cancel? true
+Order{orderId=1001, status=PROCESSING}
+Can cancel? false
 
-Cannot ship order: payment not successful.
-Order 1003 payment status: Paid
-Order 1003 status updated to Shipped
-Order 1003 cannot be cancelled at Shipped stage.
-Order #1003 [Vehicle: TRUCK, Max Speed: 140 km/h, Status: Shipped, Payment: Paid]
+=== ParkingTicket Demo ===
+ParkingTicket{ticketId='T123', vehicleType=Car, entryTime=2025-02-27T10:00:00Z, paymentStatus=PENDING}
+After payment: COMPLETED
 ```
 
-### Key Takeaways
+---
 
-- Enums provide **type safety** – you cannot accidentally assign an invalid status.
-- They can **encapsulate behavior** (e.g., `canCancel()`, `isSuccessful()`) and **data** (e.g., display name, max speed).
-- Using enums makes code more readable and maintainable, especially when dealing with fixed sets of constants.
-- Enums are widely used in real‑world applications to represent states, categories, options, and more.
+### 11. Practice Exercise
 
-This example demonstrates how enums can be more than just a list of constants – they become powerful, self‑describing components of your design.
+1. Create an enum `WeekDay` with constants MONDAY through SUNDAY. Add a method `isWeekend()` that returns true for SATURDAY and SUNDAY.
+2. Create an enum `TrafficLight` with constants RED, YELLOW, GREEN. Each should have a `next()` method that returns the next light in cycle (RED → GREEN → YELLOW → RED).
+3. In a `RestaurantOrder` system, create an enum `OrderStatus` with states: RECEIVED, PREPARING, READY, DELIVERED, CANCELLED. Add a method `canModify()` that returns true only for RECEIVED.
+4. Use `EnumMap` to store the number of available parking spots for each `VehicleType`. Write a method to print the spots.
+
+---
+
+### 12. Key Takeaways
+
+- Enums are type-safe and more expressive than integer or string constants.
+- Enums can have fields, constructors, and methods, making them mini-classes.
+- Enums can implement interfaces and have abstract methods, enabling polymorphic behavior.
+- Use `EnumSet` and `EnumMap` for efficient collections.
+- In LLD, enums are perfect for representing types, statuses, categories, and even simple state machines.
+- Always prefer enums over `public static final int` constants.
+
+Mastering enums will make your designs cleaner and more robust. Tomorrow we'll start applying all these concepts to implement our first design pattern – the **Strategy Pattern**!
