@@ -1,236 +1,499 @@
-## Day 7 — Collections for Low-Level Design
+## Day 7 — Collections for LLD (Java Collections Framework)
 
-In Java, the **Collections Framework** provides a set of interfaces and classes to store, retrieve, and manipulate groups of objects. Mastering these is essential for low-level design because they are the building blocks for managing data within your system. Each collection type serves a specific purpose, and choosing the right one can greatly simplify your design.
-
-### Key Collections and Their Use Cases
-
-- **List** – Ordered collection (sequence), allows duplicates, indexed access.  
-  *Use when you need to maintain insertion order or access elements by position.*  
-  Examples: `ArrayList` (fast random access), `LinkedList` (fast insertions/deletions).
-
-- **Set** – Unordered collection, **no duplicates**.  
-  *Use when you need to enforce uniqueness.*  
-  Examples: `HashSet` (hash-based, fast), `TreeSet` (sorted order).
-
-- **Queue** – Typically FIFO (first-in, first-out) order.  
-  *Use for processing tasks in the order they arrive.*  
-  Examples: `LinkedList` (can be used as a queue), `ArrayDeque`.
-
-- **Map** – Key-value pairs.  
-  *Use to look up values by a unique key (like an ID).*  
-  Examples: `HashMap` (hash-based), `TreeMap` (sorted keys).
-
-- **PriorityQueue** – A queue where elements are ordered according to their natural order or a custom `Comparator`.  
-  *Use when you need to process items based on priority rather than insertion order.*  
-  Example: `PriorityQueue` (heap-based).
+Today we'll dive into the **Java Collections Framework** — a set of interfaces and classes that provide ready-to-use data structures. In Low-Level Design, you'll constantly use collections to manage data like lists of vehicles, maps of tickets, queues of waiting customers, sets of unique IDs, etc. Choosing the right collection can make your code efficient, readable, and maintainable.
 
 ---
 
-### Problem Statement
+### 1. What is the Java Collections Framework?
 
-Design a simple **Task Management System** that demonstrates the use of all these collections. The system should:
+The Collections Framework is a unified architecture for storing and manipulating groups of objects. It includes:
 
-1. Store tasks by their unique ID using a **Map**.
-2. Maintain a **List** of completed tasks (history) in the order they were finished.
-3. Keep a **Queue** of pending tasks (to be processed in FIFO order).
-4. Track unique **categories** of tasks using a **Set**.
-5. Handle **urgent tasks** via a **PriorityQueue** where tasks are ordered by priority (higher priority first).
+- **Interfaces**: Define the core collection types (e.g., `List`, `Set`, `Queue`, `Map`).
+- **Implementations**: Concrete classes that implement the interfaces (e.g., `ArrayList`, `HashSet`, `HashMap`).
+- **Algorithms**: Static methods in `Collections` class for sorting, searching, etc.
 
-Each task has:
-- `id` (int, unique)
-- `title` (String)
-- `category` (String)
-- `priority` (int, higher number = higher priority)
-- `status` (PENDING, COMPLETED)
-
-The system should allow:
-- Adding a new task (stores in map, adds to pending queue, adds category to set).
-- Marking a task as completed (removes from pending, adds to history list, updates map).
-- Viewing the next pending task (peek from queue).
-- Viewing the next urgent task (peek from priority queue).
-- Displaying all unique categories.
+All collections are in the `java.util` package.
 
 ---
 
-### Java Solution
+### 2. Core Interfaces
+
+#### Collection Interface (root of the collection hierarchy)
+- `List`, `Set`, and `Queue` extend `Collection`.
+- Provides basic methods like `add()`, `remove()`, `size()`, `iterator()`.
+
+#### List Interface
+- Ordered collection (sequence).
+- Allows duplicate elements.
+- Access by index.
+
+#### Set Interface
+- Unordered collection (no duplicates).
+- Models mathematical set.
+
+#### Queue Interface
+- Collection designed for holding elements prior to processing.
+- Typically FIFO (but not required; e.g., `PriorityQueue` orders by priority).
+
+#### Map Interface
+- Not part of `Collection` interface, but part of the framework.
+- Stores key-value pairs.
+- Each key maps to at most one value.
+
+---
+
+### 3. List Implementations
+
+#### ArrayList
+- Resizable array implementation.
+- **Fast random access** (get/set by index: O(1)).
+- **Adding/removing at the end** is amortized O(1).
+- **Inserting/removing in the middle** is O(n) because elements must shift.
+- **Use when**: you need fast iteration, random access, and primarily add/remove at the end.
 
 ```java
-import java.util.*;
-
-// Task class
-class Task {
-    int id;
-    String title;
-    String category;
-    int priority;      // higher = more urgent
-    String status;     // "PENDING" or "COMPLETED"
-
-    public Task(int id, String title, String category, int priority) {
-        this.id = id;
-        this.title = title;
-        this.category = category;
-        this.priority = priority;
-        this.status = "PENDING";
-    }
-
-    @Override
-    public String toString() {
-        return String.format("Task[%d] %s (%s) priority=%d status=%s",
-                id, title, category, priority, status);
-    }
-}
-
-// TaskManager using various collections
-class TaskManager {
-    // Map: id -> Task
-    private Map<Integer, Task> taskMap = new HashMap<>();
-
-    // Queue: pending tasks in FIFO order
-    private Queue<Task> pendingQueue = new LinkedList<>();
-
-    // PriorityQueue: urgent tasks (higher priority first)
-    private Queue<Task> urgentQueue = new PriorityQueue<>(
-            (t1, t2) -> Integer.compare(t2.priority, t1.priority) // descending
-    );
-
-    // Set: unique categories
-    private Set<String> categories = new HashSet<>();
-
-    // List: history of completed tasks (in completion order)
-    private List<Task> completedHistory = new ArrayList<>();
-
-    // Add a new task
-    public void addTask(Task task) {
-        if (taskMap.containsKey(task.id)) {
-            System.out.println("Task ID already exists.");
-            return;
-        }
-        taskMap.put(task.id, task);
-        pendingQueue.offer(task);
-        urgentQueue.offer(task);
-        categories.add(task.category);
-        System.out.println("Added: " + task);
-    }
-
-    // Mark a task as completed
-    public void completeTask(int taskId) {
-        Task task = taskMap.get(taskId);
-        if (task == null) {
-            System.out.println("Task not found.");
-            return;
-        }
-        if ("COMPLETED".equals(task.status)) {
-            System.out.println("Task already completed.");
-            return;
-        }
-        // Update status
-        task.status = "COMPLETED";
-        // Remove from pending queues (we'll filter when polling)
-        // Add to history
-        completedHistory.add(task);
-        System.out.println("Completed: " + task);
-    }
-
-    // View next pending task (FIFO)
-    public void viewNextPending() {
-        // Clean up queue: skip already completed tasks
-        while (!pendingQueue.isEmpty() && "COMPLETED".equals(pendingQueue.peek().status)) {
-            pendingQueue.poll();
-        }
-        Task next = pendingQueue.peek();
-        System.out.println("Next pending (FIFO): " + (next == null ? "None" : next));
-    }
-
-    // View next urgent task (highest priority)
-    public void viewNextUrgent() {
-        while (!urgentQueue.isEmpty() && "COMPLETED".equals(urgentQueue.peek().status)) {
-            urgentQueue.poll();
-        }
-        Task next = urgentQueue.peek();
-        System.out.println("Next urgent: " + (next == null ? "None" : next));
-    }
-
-    // Show all unique categories
-    public void showCategories() {
-        System.out.println("Unique categories: " + categories);
-    }
-
-    // Show history of completed tasks
-    public void showHistory() {
-        System.out.println("Completed tasks history: " + completedHistory);
-    }
-}
-
-// Demo class
-public class CollectionsDemo {
-    public static void main(String[] args) {
-        TaskManager manager = new TaskManager();
-
-        // Add tasks
-        manager.addTask(new Task(1, "Fix bug", "Development", 5));
-        manager.addTask(new Task(2, "Write docs", "Documentation", 3));
-        manager.addTask(new Task(3, "Design review", "Development", 4));
-        manager.addTask(new Task(4, "Respond to emails", "Communication", 2));
-
-        System.out.println();
-
-        // View next pending and urgent
-        manager.viewNextPending();   // Should be task 1 (FIFO)
-        manager.viewNextUrgent();    // Should be task 1 (priority 5)
-
-        // Complete a task
-        manager.completeTask(1);
-        System.out.println();
-
-        // View again
-        manager.viewNextPending();   // Now task 2
-        manager.viewNextUrgent();    // Now task 3 (priority 4, because task 1 is done)
-
-        // Complete another
-        manager.completeTask(3);
-        System.out.println();
-
-        manager.viewNextUrgent();    // Task 2 (priority 3)
-        manager.viewNextPending();   // Task 2 (still FIFO)
-
-        // Show categories and history
-        System.out.println();
-        manager.showCategories();
-        manager.showHistory();
-    }
-}
+List<String> parkingTickets = new ArrayList<>();
+parkingTickets.add("T123");
+parkingTickets.add("T456");
+String firstTicket = parkingTickets.get(0); // "T123"
 ```
 
-**Output** (may vary slightly):
-```
-Added: Task[1] Fix bug (Development) priority=5 status=PENDING
-Added: Task[2] Write docs (Documentation) priority=3 status=PENDING
-Added: Task[3] Design review (Development) priority=4 status=PENDING
-Added: Task[4] Respond to emails (Communication) priority=2 status=PENDING
+#### LinkedList
+- Doubly-linked list implementation.
+- **Random access** is O(n) (must traverse from head).
+- **Adding/removing at beginning or end** is O(1).
+- Can be used as a queue or deque.
+- **Use when**: you frequently add/remove at both ends, or need a queue/stack.
 
-Next pending (FIFO): Task[1] Fix bug (Development) priority=5 status=PENDING
-Next urgent: Task[1] Fix bug (Development) priority=5 status=PENDING
-Completed: Task[1] Fix bug (Development) priority=5 status=COMPLETED
-
-Next pending (FIFO): Task[2] Write docs (Documentation) priority=3 status=PENDING
-Next urgent: Task[3] Design review (Development) priority=4 status=PENDING
-Completed: Task[3] Design review (Development) priority=4 status=COMPLETED
-
-Next urgent: Task[2] Write docs (Documentation) priority=3 status=PENDING
-Next pending (FIFO): Task[2] Write docs (Documentation) priority=3 status=PENDING
-
-Unique categories: [Communication, Documentation, Development]
-Completed tasks history: [Task[1] Fix bug (Development) priority=5 status=COMPLETED, Task[3] Design review (Development) priority=4 status=COMPLETED]
+```java
+Queue<String> waitingQueue = new LinkedList<>();
+waitingQueue.offer("Car1");
+waitingQueue.offer("Car2");
+String next = waitingQueue.poll(); // "Car1"
 ```
 
 ---
 
-### Key Takeaways
+### 4. Set Implementations
 
-- **Map** provides fast lookup by task ID.
-- **List** preserves the order of completed tasks.
-- **Queue** (LinkedList) maintains pending tasks in arrival order.
-- **Set** ensures we don't duplicate categories.
-- **PriorityQueue** allows us to retrieve the most urgent task efficiently.
+#### HashSet
+- Hash table implementation.
+- **No order guarantees**.
+- **add, remove, contains**: O(1) average.
+- Allows one `null`.
+- **Use when**: you need a fast set with no duplicates and don't care about order.
 
-By selecting the right collection for each responsibility, the design becomes clean, efficient, and easy to extend. Mastering these collections is crucial for any low-level design interview or real-world application development.
+```java
+Set<String> registeredVehicles = new HashSet<>();
+registeredVehicles.add("ABC123");
+registeredVehicles.add("XYZ789");
+boolean exists = registeredVehicles.contains("ABC123"); // true
+```
+
+#### LinkedHashSet
+- Hash table + linked list (maintains insertion order).
+- Slightly slower than `HashSet`, but predictable iteration order.
+- **Use when**: you need a set with no duplicates but want to preserve insertion order.
+
+```java
+Set<String> entryOrder = new LinkedHashSet<>();
+entryOrder.add("Car1");
+entryOrder.add("Bike1");
+// Iteration returns "Car1", "Bike1"
+```
+
+#### TreeSet
+- Red-black tree implementation (sorted).
+- Elements are sorted either by natural order or a custom `Comparator`.
+- **add, remove, contains**: O(log n).
+- Does not allow `null` (if using natural ordering, because `null` cannot be compared).
+- **Use when**: you need a sorted set (e.g., available parking spots by spot number).
+
+```java
+Set<Integer> availableSpots = new TreeSet<>();
+availableSpots.add(5);
+availableSpots.add(2);
+availableSpots.add(7);
+// Iteration returns 2,5,7
+```
+
+---
+
+### 5. Queue Implementations
+
+#### PriorityQueue
+- Implements a priority heap.
+- Elements are ordered according to natural order or a `Comparator`.
+- **offer, poll, remove**: O(log n).
+- **peek**: O(1).
+- **Use when**: you need to process elements based on priority (e.g., emergency vehicles first, nearest parking spot).
+
+```java
+Queue<ParkingSpot> priorityQueue = new PriorityQueue<>(
+    (s1, s2) -> Integer.compare(s1.getDistance(), s2.getDistance())
+);
+priorityQueue.offer(new ParkingSpot(1, 10)); // distance 10
+priorityQueue.offer(new ParkingSpot(2, 5));  // distance 5
+ParkingSpot nearest = priorityQueue.poll();  // spot with distance 5
+```
+
+#### ArrayDeque
+- Resizable array implementation of `Deque` (double-ended queue).
+- Faster than `LinkedList` for stack/queue operations.
+- **addFirst, addLast, removeFirst, removeLast**: O(1) amortized.
+- Can be used as a stack (LIFO) or queue (FIFO).
+- **Use when**: you need a queue/stack with efficient operations at both ends.
+
+```java
+Deque<String> stack = new ArrayDeque<>();
+stack.push("A"); // addFirst
+stack.push("B");
+String top = stack.pop(); // "B"
+```
+
+---
+
+### 6. Map Implementations
+
+#### HashMap
+- Hash table implementation.
+- **get, put, remove**: O(1) average.
+- Allows one `null` key and multiple `null` values.
+- No order guarantees.
+- **Use when**: you need fast key-value lookups, e.g., mapping ticket ID to ticket object.
+
+```java
+Map<String, ParkingTicket> ticketMap = new HashMap<>();
+ticketMap.put("T123", new ParkingTicket("T123", VehicleType.CAR));
+ParkingTicket ticket = ticketMap.get("T123");
+```
+
+#### LinkedHashMap
+- Hash table + linked list (maintains insertion order or access order).
+- Slightly slower than `HashMap`.
+- **Use when**: you need predictable iteration order (e.g., display tickets in order of issue).
+- Can be used to build an LRU cache by setting `accessOrder=true` and overriding `removeEldestEntry`.
+
+```java
+Map<String, Integer> lruCache = new LinkedHashMap<>(16, 0.75f, true) {
+    @Override
+    protected boolean removeEldestEntry(Map.Entry<String, Integer> eldest) {
+        return size() > 100; // keep only 100 entries
+    }
+};
+```
+
+#### TreeMap
+- Red-black tree implementation (sorted by keys).
+- **put, get, remove**: O(log n).
+- Keys must be `Comparable` or a `Comparator` provided.
+- **Use when**: you need a sorted map, e.g., parking spots sorted by spot number.
+
+```java
+Map<Integer, ParkingSpot> spotMap = new TreeMap<>();
+spotMap.put(10, new ParkingSpot(10));
+spotMap.put(5, new ParkingSpot(5));
+// firstKey() returns 5
+```
+
+#### EnumMap
+- Specialized `Map` implementation for enum keys.
+- Extremely efficient (uses array internally).
+- Keys must be of a single enum type.
+- **Use when**: you have enum keys (e.g., `VehicleType` mapped to available spots).
+
+```java
+EnumMap<VehicleType, Integer> spotCounts = new EnumMap<>(VehicleType.class);
+spotCounts.put(VehicleType.CAR, 50);
+spotCounts.put(VehicleType.BIKE, 20);
+int carSpots = spotCounts.get(VehicleType.CAR); // 50
+```
+
+---
+
+### 7. Choosing the Right Collection – Quick Reference
+
+| Need                                   | List                      | Set                       | Queue                     | Map                       |
+|----------------------------------------|---------------------------|---------------------------|---------------------------|---------------------------|
+| Ordered, duplicates allowed            | `ArrayList` / `LinkedList`| —                         | —                         | —                         |
+| No duplicates, no order                | —                         | `HashSet`                 | —                         | —                         |
+| No duplicates, insertion order         | —                         | `LinkedHashSet`           | —                         | —                         |
+| Sorted unique elements                 | —                         | `TreeSet`                 | —                         | —                         |
+| FIFO queue                             | —                         | —                         | `LinkedList` / `ArrayDeque` | —                         |
+| Priority queue                         | —                         | —                         | `PriorityQueue`           | —                         |
+| Key-value pairs, no order              | —                         | —                         | —                         | `HashMap`                 |
+| Key-value pairs, insertion order       | —                         | —                         | —                         | `LinkedHashMap`           |
+| Key-value pairs, sorted by key         | —                         | —                         | —                         | `TreeMap`                 |
+| Enum keys                               | —                         | —                         | —                         | `EnumMap`                 |
+
+---
+
+### 8. Thread-Safe Collections
+
+In multi-threaded environments (common in LLD problems like parking lot with multiple entry/exit gates), you need thread-safe collections.
+
+- **Synchronized wrappers**: `Collections.synchronizedList(new ArrayList<>())` etc. But they synchronize on the collection object, which can be inefficient.
+- **`java.util.concurrent` package**:
+  - `ConcurrentHashMap` – thread-safe map with high concurrency.
+  - `CopyOnWriteArrayList` – thread-safe list; suitable for read-heavy scenarios.
+  - `BlockingQueue` implementations (`ArrayBlockingQueue`, `LinkedBlockingQueue`) – thread-safe queues with blocking operations.
+  - `ConcurrentLinkedQueue` – non-blocking thread-safe queue.
+
+**Example:**
+```java
+Map<String, ParkingTicket> concurrentTicketMap = new ConcurrentHashMap<>();
+Queue<String> waitingCars = new ConcurrentLinkedQueue<>();
+```
+
+---
+
+### 9. Practical Example: Parking Lot System with Collections
+
+Let's design a simple parking lot that uses various collections.
+
+**Requirements:**
+- Different vehicle types (CAR, BIKE, TRUCK).
+- Each vehicle type has a fixed number of spots.
+- When a vehicle arrives, assign the nearest available spot (spots have numbers).
+- Keep track of active tickets.
+- Support multiple entry/exit gates (thread-safe).
+
+#### Folder Structure
+```
+Day07-Collections/
+├── src/
+│   └── com/
+│       └── example/
+│           └── parking/
+│               ├── VehicleType.java (enum)
+│               ├── ParkingSpot.java
+│               ├── ParkingTicket.java
+│               ├── ParkingLot.java
+│               └── Main.java
+└── README.md
+```
+
+#### VehicleType.java (enum)
+```java
+package com.example.parking;
+
+public enum VehicleType {
+    CAR, BIKE, TRUCK
+}
+```
+
+#### ParkingSpot.java
+```java
+package com.example.parking;
+
+public class ParkingSpot implements Comparable<ParkingSpot> {
+    private final int spotNumber;
+    private final VehicleType vehicleType;
+    private boolean isAvailable;
+
+    public ParkingSpot(int spotNumber, VehicleType vehicleType) {
+        this.spotNumber = spotNumber;
+        this.vehicleType = vehicleType;
+        this.isAvailable = true;
+    }
+
+    public int getSpotNumber() { return spotNumber; }
+    public VehicleType getVehicleType() { return vehicleType; }
+    public boolean isAvailable() { return isAvailable; }
+    public void setAvailable(boolean available) { isAvailable = available; }
+
+    @Override
+    public int compareTo(ParkingSpot other) {
+        return Integer.compare(this.spotNumber, other.spotNumber);
+    }
+}
+```
+
+#### ParkingTicket.java
+```java
+package com.example.parking;
+
+import java.time.Instant;
+
+public class ParkingTicket {
+    private final String ticketId;
+    private final String vehicleNumber;
+    private final VehicleType vehicleType;
+    private final int spotNumber;
+    private final Instant entryTime;
+    private Instant exitTime;
+    private double fee;
+
+    public ParkingTicket(String ticketId, String vehicleNumber, VehicleType vehicleType, int spotNumber) {
+        this.ticketId = ticketId;
+        this.vehicleNumber = vehicleNumber;
+        this.vehicleType = vehicleType;
+        this.spotNumber = spotNumber;
+        this.entryTime = Instant.now();
+    }
+
+    // getters and setters
+    public String getTicketId() { return ticketId; }
+    public String getVehicleNumber() { return vehicleNumber; }
+    public VehicleType getVehicleType() { return vehicleType; }
+    public int getSpotNumber() { return spotNumber; }
+    public Instant getEntryTime() { return entryTime; }
+    public Instant getExitTime() { return exitTime; }
+    public void setExitTime(Instant exitTime) { this.exitTime = exitTime; }
+    public double getFee() { return fee; }
+    public void setFee(double fee) { this.fee = fee; }
+}
+```
+
+#### ParkingLot.java (core logic)
+```java
+package com.example.parking;
+
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.atomic.AtomicInteger;
+
+public class ParkingLot {
+    private final Map<VehicleType, Queue<ParkingSpot>> availableSpots;
+    private final Map<VehicleType, Set<ParkingSpot>> allSpots; // for reporting
+    private final Map<String, ParkingTicket> activeTickets; // ticketId -> ticket
+    private final Map<String, ParkingTicket> vehicleToTicket; // vehicleNumber -> ticket
+    private final AtomicInteger ticketCounter = new AtomicInteger(1);
+
+    public ParkingLot() {
+        availableSpots = new ConcurrentHashMap<>();
+        allSpots = new ConcurrentHashMap<>();
+        activeTickets = new ConcurrentHashMap<>();
+        vehicleToTicket = new ConcurrentHashMap<>();
+
+        // Initialize spots for each vehicle type
+        for (VehicleType type : VehicleType.values()) {
+            // Use TreeSet to keep spots sorted, then wrap in ConcurrentLinkedQueue
+            Set<ParkingSpot> spots = new TreeSet<>();
+            for (int i = 1; i <= 10; i++) {
+                ParkingSpot spot = new ParkingSpot(i * 100 + type.ordinal(), type);
+                spots.add(spot);
+            }
+            allSpots.put(type, Collections.synchronizedSet(spots));
+            // Initialize availableSpots queue with all spots
+            Queue<ParkingSpot> queue = new ConcurrentLinkedQueue<>(spots);
+            availableSpots.put(type, queue);
+        }
+    }
+
+    public ParkingTicket parkVehicle(String vehicleNumber, VehicleType type) {
+        // Check if vehicle already parked
+        if (vehicleToTicket.containsKey(vehicleNumber)) {
+            throw new IllegalStateException("Vehicle already parked");
+        }
+
+        Queue<ParkingSpot> queue = availableSpots.get(type);
+        ParkingSpot spot = queue.poll();
+        if (spot == null) {
+            throw new IllegalStateException("No available spot for " + type);
+        }
+
+        spot.setAvailable(false);
+        String ticketId = "TICKET-" + ticketCounter.getAndIncrement();
+        ParkingTicket ticket = new ParkingTicket(ticketId, vehicleNumber, type, spot.getSpotNumber());
+        activeTickets.put(ticketId, ticket);
+        vehicleToTicket.put(vehicleNumber, ticket);
+        return ticket;
+    }
+
+    public double exitVehicle(String ticketId) {
+        ParkingTicket ticket = activeTickets.remove(ticketId);
+        if (ticket == null) {
+            throw new IllegalArgumentException("Invalid ticket ID");
+        }
+        vehicleToTicket.remove(ticket.getVehicleNumber());
+
+        // Calculate fee (simplified: $5 per hour)
+        long hours = java.time.Duration.between(ticket.getEntryTime(), java.time.Instant.now()).toHours();
+        if (hours == 0) hours = 1;
+        double fee = hours * 5.0;
+        ticket.setFee(fee);
+        ticket.setExitTime(java.time.Instant.now());
+
+        // Free up the spot
+        ParkingSpot spot = allSpots.get(ticket.getVehicleType()).stream()
+                .filter(s -> s.getSpotNumber() == ticket.getSpotNumber())
+                .findFirst().orElseThrow();
+        spot.setAvailable(true);
+        availableSpots.get(ticket.getVehicleType()).offer(spot);
+
+        return fee;
+    }
+
+    public void displayStatus() {
+        System.out.println("\n--- Parking Lot Status ---");
+        for (VehicleType type : VehicleType.values()) {
+            long available = availableSpots.get(type).size();
+            long total = allSpots.get(type).size();
+            System.out.println(type + ": " + available + "/" + total + " spots available");
+        }
+        System.out.println("Active tickets: " + activeTickets.size());
+    }
+}
+```
+
+#### Main.java
+```java
+package com.example.parking;
+
+public class Main {
+    public static void main(String[] args) throws InterruptedException {
+        ParkingLot lot = new ParkingLot();
+
+        // Simulate parking
+        ParkingTicket t1 = lot.parkVehicle("ABC123", VehicleType.CAR);
+        System.out.println("Parked: " + t1.getTicketId() + " at spot " + t1.getSpotNumber());
+
+        ParkingTicket t2 = lot.parkVehicle("XYZ789", VehicleType.BIKE);
+        System.out.println("Parked: " + t2.getTicketId() + " at spot " + t2.getSpotNumber());
+
+        lot.displayStatus();
+
+        // Simulate exit after some time
+        Thread.sleep(2000); // wait 2 seconds
+        double fee = lot.exitVehicle(t1.getTicketId());
+        System.out.println("\nExited " + t1.getTicketId() + ", fee: $" + fee);
+
+        lot.displayStatus();
+    }
+}
+```
+
+**Explanation of collections used:**
+- `availableSpots`: `ConcurrentHashMap<VehicleType, Queue<ParkingSpot>>` – thread-safe map where each vehicle type has a queue of available spots. We use `ConcurrentLinkedQueue` for thread-safe FIFO.
+- `allSpots`: `ConcurrentHashMap<VehicleType, Set<ParkingSpot>>` – to keep all spots for a type. We use `Collections.synchronizedSet(new TreeSet<>())` to maintain sorted order and thread safety.
+- `activeTickets`: `ConcurrentHashMap<String, ParkingTicket>` – thread-safe map for active tickets.
+- `vehicleToTicket`: `ConcurrentHashMap<String, ParkingTicket>` – fast lookup by vehicle number.
+
+---
+
+### 10. Practice Exercises
+
+1. **Implement an LRU Cache** using `LinkedHashMap`.
+2. **Design a Task Scheduler** where tasks have priority; use `PriorityQueue`.
+3. **Build a Simple In-Memory Database** for users (key: user ID, value: user object) using `HashMap`. Add thread safety.
+4. **Simulate a Call Center** where calls are queued; use `ArrayDeque` as queue and multiple threads as agents (use `BlockingQueue`).
+5. **Enhance the Parking Lot**:
+   - Add `ConcurrentHashMap` for spot occupancy to quickly find which vehicle is in which spot.
+   - Use `EnumMap` for storing rates per vehicle type.
+
+---
+
+### 11. Key Takeaways
+
+- **Choose the right collection** based on your access patterns (order, duplicates, sorting, concurrency).
+- **`ArrayList`** for random access, **`LinkedList`** for frequent insertions/deletions at ends.
+- **`HashSet`** for fast uniqueness, **`TreeSet`** for sorted uniqueness.
+- **`HashMap`** for key-value lookups, **`LinkedHashMap`** for predictable iteration, **`TreeMap`** for sorted keys, **`EnumMap`** for enum keys.
+- **`PriorityQueue`** for priority-based processing.
+- **`ArrayDeque`** for stack/queue operations.
+- In multi-threaded LLD, use concurrent collections (`ConcurrentHashMap`, `CopyOnWriteArrayList`, `BlockingQueue`) or synchronize manually.
+- Always consider performance characteristics (Big O) when designing for scale.
+
+Collections are the bread and butter of LLD. Mastering them will enable you to implement complex systems efficiently. Tomorrow we'll start with our first design pattern – **Strategy Pattern** – and see how collections and enums fit into real-world designs.
