@@ -1,203 +1,303 @@
-## Day 8 — Generics Basics
+## Day 8 — Generics Basics (Understand: `List<Vehicle>`, `Map<String, User>`)
 
-Generics enable types (classes and interfaces) to be parameters when defining classes, interfaces, and methods. They provide **stronger type checks at compile time** and eliminate the need for explicit casting, making code more readable and safer.
-
-### Why Generics?
-
-- **Type safety**: The compiler ensures you only put objects of the correct type into a collection. Without generics, you could accidentally add a `String` to a `List` intended for `Integer`, causing a `ClassCastException` at runtime.
-- **Elimination of casts**: You don't need to cast when retrieving elements from a collection.
-- **Reusable code**: You can write algorithms that work on different types without duplicating code.
-
-### Common Syntax
-
-- `List<Vehicle>` – a list that can only hold `Vehicle` objects (or its subclasses).
-- `Map<String, User>` – a map with keys of type `String` and values of type `User`.
-- Generic class: `class Box<T> { ... }`
-- Generic method: `public <T> void printArray(T[] array) { ... }`
+Generics are a powerful feature in Java that enable types (classes and interfaces) to be parameters when defining classes, interfaces, and methods. They provide stronger type checks at compile time and eliminate the need for explicit casting. In Low-Level Design, generics are essential for creating reusable and type-safe data structures and algorithms.
 
 ---
 
-### Problem Statement
+### 1. What Are Generics?
 
-Design a simple **Garage Management System** that uses generics to safely store different types of vehicles.
+- **Generics** allow you to abstract over types.
+- They enable you to write code that can work with different data types while providing compile-time type safety.
+- The most familiar example is collection classes like `List<T>`, where `T` is a type parameter.
 
-1. Create a **generic class `Garage<T>`** that:
-   - Has a `List<T>` to store items of type `T`.
-   - Provides methods to `add(T item)`, `remove(T item)`, and `displayAll()`.
-   - Has a method `getCount()` that returns the number of items.
-
-2. Create a **hierarchy of vehicles** (as before):
-   - `Vehicle` (abstract or concrete) with a `brand` field.
-   - `Car` extends `Vehicle`, adds `doors`.
-   - `Bike` extends `Vehicle`, adds `gears`.
-
-3. Create a separate class **`User`** with fields `username` and `email`.
-
-4. In a main class, demonstrate:
-   - Creating a `Garage<Car>` that only accepts `Car` objects.
-   - Creating a `Garage<Bike>` that only accepts `Bike` objects.
-   - Attempting to add a `Bike` to the `Garage<Car>` should cause a compile-time error.
-   - Creating a `Map<String, User>` to store users by their username, and perform some operations.
-
-5. Also demonstrate a **generic method** that prints the brand of any vehicle (using wildcards or a generic method).
-
----
-
-### Java Solution
-
+**Without generics (pre-Java 5):**
 ```java
-import java.util.*;
-
-// ========== Vehicle hierarchy ==========
-class Vehicle {
-    protected String brand;
-    public Vehicle(String brand) { this.brand = brand; }
-    public String getBrand() { return brand; }
-    @Override
-    public String toString() { return "Vehicle{brand='" + brand + "'}"; }
-}
-
-class Car extends Vehicle {
-    private int doors;
-    public Car(String brand, int doors) { super(brand); this.doors = doors; }
-    @Override public String toString() { return "Car{brand='" + brand + "', doors=" + doors + "}"; }
-}
-
-class Bike extends Vehicle {
-    private int gears;
-    public Bike(String brand, int gears) { super(brand); this.gears = gears; }
-    @Override public String toString() { return "Bike{brand='" + brand + "', gears=" + gears + "}"; }
-}
-
-// ========== Generic Garage class ==========
-class Garage<T> {
-    private List<T> items = new ArrayList<>();
-
-    public void add(T item) {
-        items.add(item);
-        System.out.println("Added: " + item);
-    }
-
-    public boolean remove(T item) {
-        boolean removed = items.remove(item);
-        if (removed) System.out.println("Removed: " + item);
-        return removed;
-    }
-
-    public void displayAll() {
-        System.out.println("Garage contents: " + items);
-    }
-
-    public int getCount() {
-        return items.size();
-    }
-}
-
-// ========== User class ==========
-class User {
-    private String username;
-    private String email;
-    public User(String username, String email) {
-        this.username = username;
-        this.email = email;
-    }
-    public String getUsername() { return username; }
-    public String getEmail() { return email; }
-    @Override public String toString() {
-        return "User{username='" + username + "', email='" + email + "'}";
-    }
-}
-
-// ========== Generic method example ==========
-class VehicleUtils {
-    // Generic method: prints brand of any Vehicle
-    public static <T extends Vehicle> void printBrand(T vehicle) {
-        System.out.println("Brand: " + vehicle.getBrand());
-    }
-
-    // Wildcard method: processes a list of any Vehicle subclass
-    public static void printAllBrands(List<? extends Vehicle> vehicles) {
-        for (Vehicle v : vehicles) {
-            System.out.println(v.getBrand());
-        }
-    }
-}
-
-// ========== Demo ==========
-public class GenericsDemo {
-    public static void main(String[] args) {
-        // 1. Garage for Cars only
-        Garage<Car> carGarage = new Garage<>();
-        carGarage.add(new Car("Toyota", 4));
-        carGarage.add(new Car("Honda", 4));
-        // carGarage.add(new Bike("Giant", 21)); // Compile error: incompatible types
-
-        // 2. Garage for Bikes only
-        Garage<Bike> bikeGarage = new Garage<>();
-        bikeGarage.add(new Bike("Giant", 21));
-        bikeGarage.add(new Bike("Trek", 18));
-
-        System.out.println("\nCar garage count: " + carGarage.getCount());
-        carGarage.displayAll();
-
-        System.out.println("\nBike garage count: " + bikeGarage.getCount());
-        bikeGarage.displayAll();
-
-        // 3. Map<String, User>
-        Map<String, User> userMap = new HashMap<>();
-        userMap.put("alice", new User("alice", "alice@example.com"));
-        userMap.put("bob", new User("bob", "bob@example.com"));
-
-        System.out.println("\nUser map:");
-        for (Map.Entry<String, User> entry : userMap.entrySet()) {
-            System.out.println(entry.getKey() + " -> " + entry.getValue());
-        }
-
-        // 4. Generic methods
-        System.out.println("\nGeneric method printBrand:");
-        Car myCar = new Car("Ford", 2);
-        VehicleUtils.printBrand(myCar);   // T is inferred as Car
-
-        System.out.println("Wildcard method printAllBrands:");
-        List<Vehicle> vehicles = Arrays.asList(new Car("BMW", 4), new Bike("Cannondale", 12));
-        VehicleUtils.printAllBrands(vehicles);
-    }
-}
+List list = new ArrayList();
+list.add("hello");
+list.add(123); // allowed, but unsafe
+String s = (String) list.get(0); // need explicit cast
+String s2 = (String) list.get(1); // ClassCastException at runtime
 ```
 
-**Output:**
-
-```
-Added: Car{brand='Toyota', doors=4}
-Added: Car{brand='Honda', doors=4}
-Added: Bike{brand='Giant', gears=21}
-Added: Bike{brand='Trek', gears=18}
-
-Car garage count: 2
-Garage contents: [Car{brand='Toyota', doors=4}, Car{brand='Honda', doors=4}]
-
-Bike garage count: 2
-Garage contents: [Bike{brand='Giant', gears=21}, Bike{brand='Trek', gears=18}]
-
-User map:
-alice -> User{username='alice', email='alice@example.com'}
-bob -> User{username='bob', email='bob@example.com'}
-
-Generic method printBrand:
-Brand: Ford
-Wildcard method printAllBrands:
-BMW
-Cannondale
+**With generics:**
+```java
+List<String> list = new ArrayList<>();
+list.add("hello");
+// list.add(123); // compile error: type mismatch
+String s = list.get(0); // no cast needed
 ```
 
 ---
 
-### Key Takeaways
+### 2. Why Use Generics?
 
-- **Type safety** with generics: `Garage<Car>` guarantees that only `Car` objects are stored.
-- **Compile-time checking** prevents accidental insertion of wrong types.
-- **Generic classes** allow creating type‑safe containers without duplicating code.
-- **Generic methods** provide flexibility to operate on parameters of various types while preserving type safety.
-- **Wildcards** (`? extends Vehicle`) are useful when you want to accept a collection of any subtype.
+- **Type safety**: Catch type errors at compile time.
+- **Eliminate casts**: No need to cast when retrieving elements.
+- **Code reuse**: Write a single class/method that works with many types.
+- **Better readability**: Intent is clear (e.g., `List<String>`).
 
-Generics are fundamental in modern Java, especially when working with collections. Mastering them helps you write cleaner, more robust, and reusable code.
+---
+
+### 3. Generic Classes
+
+You can define your own generic classes. Syntax: `class ClassName<T> { ... }`
+
+**Example: A generic `Box` class**
+```java
+public class Box<T> {
+    private T content;
+
+    public void set(T content) {
+        this.content = content;
+    }
+
+    public T get() {
+        return content;
+    }
+}
+```
+
+**Usage:**
+```java
+Box<String> stringBox = new Box<>();
+stringBox.set("Hello");
+String value = stringBox.get(); // no cast
+
+Box<Integer> intBox = new Box<>();
+intBox.set(123);
+Integer intValue = intBox.get();
+```
+
+---
+
+### 4. Generic Interfaces
+
+Interfaces can also be generic.
+
+**Example: A generic `Pair` interface**
+```java
+public interface Pair<K, V> {
+    K getKey();
+    V getValue();
+}
+```
+
+**Implementation:**
+```java
+public class OrderedPair<K, V> implements Pair<K, V> {
+    private K key;
+    private V value;
+
+    public OrderedPair(K key, V value) {
+        this.key = key;
+        this.value = value;
+    }
+
+    @Override
+    public K getKey() { return key; }
+
+    @Override
+    public V getValue() { return value; }
+}
+```
+
+**Usage:**
+```java
+Pair<String, Integer> pair = new OrderedPair<>("Age", 30);
+```
+
+---
+
+### 5. Generic Methods
+
+You can also write generic methods inside non-generic classes. The type parameter is declared before the return type.
+
+**Example: Generic method to convert an array to a list**
+```java
+public class Utils {
+    public static <T> List<T> arrayToList(T[] array) {
+        List<T> list = new ArrayList<>();
+        for (T element : array) {
+            list.add(element);
+        }
+        return list;
+    }
+}
+```
+
+**Usage:**
+```java
+String[] strArray = {"a", "b", "c"};
+List<String> strList = Utils.arrayToList(strArray);
+
+Integer[] intArray = {1, 2, 3};
+List<Integer> intList = Utils.arrayToList(intArray);
+```
+
+---
+
+### 6. Type Parameter Naming Conventions
+
+By convention, type parameter names are single uppercase letters:
+
+- `E` – Element (used extensively by Java Collections)
+- `K` – Key
+- `V` – Value
+- `N` – Number
+- `T` – Type
+- `S, U, V` etc. – second, third, fourth types
+
+---
+
+### 7. Bounded Type Parameters
+
+Sometimes you want to restrict the types that can be used as type arguments. Use `extends` to specify an upper bound.
+
+**Example: A method that works only with subclasses of `Number`**
+```java
+public static <T extends Number> double sum(T a, T b) {
+    return a.doubleValue() + b.doubleValue();
+}
+```
+
+**Usage:**
+```java
+sum(10, 20);      // Integer extends Number – OK
+sum(10.5, 20.7);  // Double extends Number – OK
+// sum("a", "b"); // compile error: String does not extend Number
+```
+
+You can also have multiple bounds: `<T extends A & B & C>` (A must be a class or interface, B and C must be interfaces).
+
+---
+
+### 8. Wildcards (`?`)
+
+Wildcards represent an unknown type. They are used in method signatures and field declarations where you need to express that the exact type is not important, or you need to provide flexibility.
+
+- **Unbounded wildcard**: `?` – stands for any type.
+- **Upper bounded wildcard**: `? extends Type` – any type that is a subtype of `Type`.
+- **Lower bounded wildcard**: `? super Type` – any type that is a supertype of `Type`.
+
+#### Unbounded Wildcard
+```java
+public static void printList(List<?> list) {
+    for (Object elem : list) {
+        System.out.println(elem);
+    }
+}
+```
+You can read from `list` as `Object`, but you cannot add elements (except `null`) because the type is unknown.
+
+#### Upper Bounded Wildcard (`? extends`)
+```java
+public static double sumOfList(List<? extends Number> list) {
+    double sum = 0.0;
+    for (Number num : list) {
+        sum += num.doubleValue();
+    }
+    return sum;
+}
+```
+You can read from `list` as `Number`, but you cannot add (because you don't know the specific subtype).
+
+#### Lower Bounded Wildcard (`? super`)
+```java
+public static void addNumbers(List<? super Integer> list) {
+    for (int i = 1; i <= 5; i++) {
+        list.add(i); // you can add Integer
+    }
+}
+```
+You can add `Integer` (or its subtypes) to a list that is a supertype of `Integer` (like `List<Number>` or `List<Object>`).
+
+**PECS (Producer Extends, Consumer Super)**:  
+- Use `? extends T` when you *produce* (read) items from a structure.  
+- Use `? super T` when you *consume* (write) items into a structure.
+
+---
+
+### 9. Type Erasure
+
+Java generics are implemented using **type erasure**. This means that generic type information is only present at compile time and is removed (erased) during compilation. The compiler replaces type parameters with their bounds or `Object` and adds necessary casts. This ensures backward compatibility with pre-generics code.
+
+**Consequences:**
+- You cannot use primitive types as type parameters (use wrapper classes).
+- You cannot create instances of type parameters (e.g., `new T()`).
+- You cannot have static fields of type parameters.
+- You cannot use `instanceof` with parameterized types (except unbounded wildcards).
+- You cannot create arrays of parameterized types (e.g., `new List<String>[10]`) – though you can use `ArrayList` or `List<List<String>>`.
+
+---
+
+### 10. Examples Relevant to LLD
+
+#### `List<Vehicle>`
+```java
+List<Vehicle> vehicles = new ArrayList<>();
+vehicles.add(new Car());
+vehicles.add(new Bike()));
+Vehicle v = vehicles.get(0); // no cast needed
+```
+
+#### `Map<String, User>`
+```java
+Map<String, User> userMap = new HashMap<>();
+userMap.put("john123", new User("John"));
+User user = userMap.get("john123");
+```
+
+#### Generic Repository Pattern
+```java
+public interface Repository<T, ID> {
+    T findById(ID id);
+    void save(T entity);
+    void delete(ID id);
+}
+
+public class UserRepository implements Repository<User, Long> {
+    private Map<Long, User> store = new HashMap<>();
+
+    @Override
+    public User findById(Long id) {
+        return store.get(id);
+    }
+
+    @Override
+    public void save(User user) {
+        store.put(user.getId(), user);
+    }
+
+    @Override
+    public void delete(Long id) {
+        store.remove(id);
+    }
+}
+```
+
+---
+
+### 11. Practice Exercise
+
+1. **Create a generic `Cache` class** that stores key-value pairs with a maximum size. Use `Map<K, V>` internally. Add methods `put(K key, V value)`, `get(K key)`, and `evict()` (remove eldest if size exceeds limit). (Hint: Use `LinkedHashMap` with `removeEldestEntry`.)
+
+2. **Write a generic method `swap`** that swaps two elements in an array at given indices.
+
+3. **Design a generic `Result` class** that can hold either a success value of type `T` or an error message (`String`). (Similar to `Optional` but with error.)
+
+4. **Modify the ParkingLot from Day 7** to use generics:  
+   - Create a generic `ParkingSpot<T extends Vehicle>` where `T` is the vehicle type.  
+   - Use `Map<VehicleType, Queue<ParkingSpot<?>>>` for available spots.
+
+---
+
+### 12. Key Takeaways
+
+- Generics provide compile-time type safety and eliminate casting.
+- Use `<>` (diamond operator) to infer type arguments.
+- Bounded type parameters (`<T extends SomeClass>`) restrict what types can be used.
+- Wildcards (`?`, `? extends`, `? super`) add flexibility when you don't need exact type.
+- Remember PECS for wildcard usage.
+- Type erasure means generic type info is not available at runtime.
+
+Generics are fundamental for writing reusable, type-safe code. They are used extensively in collections, and you'll encounter them frequently in LLD (e.g., repository patterns, caches, strategy containers). Practice by converting non-generic code to generic. Tomorrow we'll apply these concepts in the **Strategy Pattern** implementation.
