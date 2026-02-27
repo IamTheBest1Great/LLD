@@ -1,132 +1,432 @@
-## Day 5 — Composition vs Inheritance
+## Day 5 — Composition vs Inheritance (MOST IMPORTANT CONCEPT IN LLD)
 
-### The Most Important Concept in Low-Level Design
+Today we tackle one of the most critical decisions in object-oriented design: **whether to use inheritance or composition**. This choice impacts flexibility, maintainability, and scalability of your code. The mantra *"Favor composition over inheritance"* is a cornerstone of many design patterns (like Strategy, Decorator, etc.). Let's understand why.
 
-In object-oriented design, two fundamental relationships exist between classes:
+---
 
-- **Inheritance** (IS‑A relationship): A `Car` **is a** `Vehicle`.  
-- **Composition** (HAS‑A relationship): A `Car` **has an** `Engine`, **has** `Wheels`, etc.
+### 1. Definitions
 
-While inheritance promotes code reuse, it can lead to rigid designs if overused. The **Gang of Four** principle *"Favor composition over inheritance"* reminds us that composition often yields more flexible, maintainable systems.
+- **Inheritance** (`IS-A` relationship): A class (subclass) derives from another class (superclass), inheriting its fields and methods. Example: `Dog extends Animal`.
+- **Composition** (`HAS-A` relationship): A class contains references to objects of other classes as members. Example: `Car` has an `Engine` object.
 
-### Why "Car extends Engine" is Bad
+Both allow code reuse, but they achieve it differently.
 
-If you write `class Car extends Engine`, you are saying a Car *is an* Engine – which makes little sense conceptually. This misuse of inheritance creates:
+---
 
-- **Tight coupling**: Changes in `Engine` may unintentionally affect `Car`.
-- **Fragile base class**: Modifying the base class can break subclasses.
-- **Inflexibility**: A car cannot easily change its engine type at runtime.
-- **Poor abstraction**: The Car inherits all Engine methods, even those irrelevant (e.g., `Engine.getCylinders()` doesn't belong to a Car).
+### 2. Inheritance – The Good and The Bad
 
-### "Car has Engine" is Good (Composition)
+**Good:**
+- Straightforward when a genuine `IS-A` relationship exists.
+- Code reuse – common logic in a base class.
+- Polymorphism – you can treat a subclass as its superclass.
+- Easy to override or extend behavior.
 
-With composition, a Car contains references to its parts (Engine, Wheels, etc.). This models reality: a car *has* an engine, but it is not an engine itself. Benefits:
+**Bad:**
+- **Tight coupling**: Subclass depends on implementation details of superclass. Changes in superclass can break subclasses (fragile base class problem).
+- **Inheritance hierarchy can become deep and complex**.
+- **Limited flexibility**: A subclass can only extend one class (single inheritance in Java). This restricts design.
+- **Breaks encapsulation**: Subclasses may need to access protected members, exposing internal details.
+- **Not always semantically correct**: Many relationships are not `IS-A` but `HAS-A`. For example, a `Car` is not an `Engine`; it has an engine.
 
-- **Loose coupling**: Car depends on abstractions (interfaces), not concrete classes.
-- **Flexibility**: You can swap the engine at runtime (e.g., replace a `PetrolEngine` with an `ElectricEngine`).
-- **Better encapsulation**: Car exposes only behavior relevant to a car.
-- **Testability**: You can easily mock the engine for unit tests.
+---
 
-### Problem Statement
+### 3. Composition – The Good and The Bad
 
-Design a simple car system to illustrate composition over inheritance.
+**Good:**
+- **Loose coupling**: Class only knows about the interfaces of its components, not their concrete implementations (especially if you program to interfaces).
+- **Flexibility**: You can replace components at runtime (e.g., swap engine types) – this is the basis of Strategy pattern.
+- **Reuse through delegation**: Use functionality of composed objects without inheriting from them.
+- **Easier to test**: You can mock components.
+- **Follows Single Responsibility Principle**: Each class focuses on one thing, composing others for additional behavior.
 
-1. **Create an interface `Engine`** with a method `void start()`.
-2. **Implement two concrete engines**:
-   - `PetrolEngine`: prints `"Petrol engine started."`
-   - `ElectricEngine`: prints `"Electric engine started (silent)."`
-3. **Create a `Car` class** that uses composition:
-   - It has a field of type `Engine` (the engine).
-   - It has a constructor that accepts an `Engine` (dependency injection).
-   - It has a method `startCar()` that delegates to the engine's `start()` method.
-   - Optionally, add methods like `setEngine(Engine engine)` to allow runtime replacement.
-4. In a main class, demonstrate:
-   - Creating a Car with a `PetrolEngine`, starting it.
-   - Creating another Car with an `ElectricEngine`, starting it.
-   - (Optional) Changing the engine of an existing car.
+**Bad:**
+- **More boilerplate**: You need to write forwarding methods if you want to expose component methods.
+- **Harder to see the big picture**: The system is composed of many small objects, which may increase complexity if overused.
 
-### Java Solution
+---
 
+### 4. Favor Composition Over Inheritance
+
+This design principle suggests that you should prefer composing objects to achieve polymorphic behavior and code reuse rather than relying on inheritance hierarchies. Inheritance should be used only when a genuine `IS-A` relationship exists and when the superclass is stable and designed for extension.
+
+**Why?**
+- Composition leads to more flexible, maintainable, and testable code.
+- It aligns with the Open/Closed Principle (open for extension, closed for modification) because you can add new behavior by plugging in new components without changing existing code.
+- Many design patterns (Strategy, Decorator, Composite, etc.) are based on composition.
+
+---
+
+### 5. Classic Bad Example: `Car extends Engine`
+
+Let's see why this is wrong.
+
+**Bad Design (Inheritance)**
 ```java
-// Engine interface (abstraction)
-interface Engine {
-    void start();
+class Engine {
+    public void start() {
+        System.out.println("Engine starting...");
+    }
+    public void stop() {
+        System.out.println("Engine stopping...");
+    }
 }
 
-// Concrete engine types
+class Car extends Engine {  // Car IS-A Engine? No!
+    private String model;
+
+    public void drive() {
+        start();   // inherited from Engine
+        System.out.println("Car is moving");
+    }
+}
+```
+
+**Why is this bad?**
+- Semantic violation: A car is not an engine. It has an engine.
+- If you later add a `Motorcycle` that also extends `Engine`, you duplicate the problem.
+- `Car` cannot have multiple engines (e.g., hybrid with two engines) because it's limited to one superclass.
+- If `Engine` changes (e.g., adds a `dispose()` method), all subclasses are affected, even if they don't need it.
+
+---
+
+### 6. Good Example: `Car has Engine` (Composition)
+
+**Good Design (Composition)**
+```java
+class Engine {
+    private String type;
+
+    public Engine(String type) {
+        this.type = type;
+    }
+
+    public void start() {
+        System.out.println(type + " engine starting...");
+    }
+
+    public void stop() {
+        System.out.println(type + " engine stopping...");
+    }
+}
+
+class Car {
+    private String model;
+    private Engine engine;  // Composition: Car HAS-A Engine
+
+    public Car(String model, Engine engine) {
+        this.model = model;
+        this.engine = engine;
+    }
+
+    public void drive() {
+        engine.start();     // Delegation
+        System.out.println(model + " is moving");
+    }
+
+    public void setEngine(Engine engine) { // Allows swapping engine at runtime
+        this.engine = engine;
+    }
+}
+```
+
+**Benefits:**
+- Clear `HAS-A` relationship.
+- `Car` can have any type of engine (Petrol, Diesel, Electric) by passing different `Engine` objects.
+- You can change the engine at runtime (`setEngine`).
+- `Engine` can be reused in other classes (e.g., `Boat`).
+- Each class has a single responsibility.
+
+---
+
+### 7. Using Interfaces to Enhance Composition
+
+To make composition even more flexible, we can depend on abstractions (interfaces) rather than concrete classes.
+
+```java
+interface Engine {
+    void start();
+    void stop();
+}
+
 class PetrolEngine implements Engine {
     @Override
-    public void start() {
-        System.out.println("Petrol engine started.");
-    }
+    public void start() { System.out.println("Petrol engine starting..."); }
+    @Override
+    public void stop() { System.out.println("Petrol engine stopping..."); }
 }
 
 class ElectricEngine implements Engine {
     @Override
-    public void start() {
-        System.out.println("Electric engine started (silent).");
-    }
+    public void start() { System.out.println("Electric motor humming..."); }
+    @Override
+    public void stop() { System.out.println("Electric motor stopping..."); }
 }
 
-// Car uses composition: it HAS an Engine
 class Car {
-    private Engine engine;   // composition
+    private Engine engine;  // Depends on abstraction
+    // constructor, drive method, etc.
+}
+```
 
-    // Constructor injection
-    public Car(Engine engine) {
-        this.engine = engine;
-    }
+Now you can inject any `Engine` implementation into `Car` – this is **dependency injection** and follows the Dependency Inversion Principle.
 
-    // Delegate to the engine
-    public void startCar() {
-        engine.start();
-    }
+---
 
-    // Optionally, allow changing engine at runtime
-    public void setEngine(Engine engine) {
-        System.out.println("Swapping engine...");
-        this.engine = engine;
-    }
+### 8. When to Use Inheritance?
+
+Inheritance is appropriate when:
+- There is a clear **IS-A** relationship (e.g., `Dog` is an `Animal`).
+- The superclass is designed for extension (e.g., abstract classes with protected methods).
+- You need to leverage polymorphism in a way that is stable (e.g., `ArrayList` extends `AbstractList`).
+- The hierarchy is shallow and unlikely to change.
+
+**Example of good inheritance:**
+```java
+abstract class Bird {
+    public abstract void fly();
 }
 
-// Demo class
-public class CompositionDemo {
+class Sparrow extends Bird {
+    @Override
+    public void fly() {
+        System.out.println("Sparrow flying");
+    }
+}
+```
+
+But even here, if you later want to model a `Penguin` (which cannot fly), inheritance fails. Composition would be better: `Bird` has a `FlyingBehavior` (Strategy pattern).
+
+---
+
+### 9. Practice: Design a System Using Composition
+
+Let's build a simple vehicle system using composition. We'll have `Engine`, `Transmission`, and `FuelTank` components, and a `Vehicle` class that composes them.
+
+#### Folder Structure
+```
+Day05-CompositionVsInheritance/
+├── src/
+│   └── com/
+│       └── example/
+│           └── vehicle/
+│               ├── Engine.java (interface)
+│               ├── PetrolEngine.java
+│               ├── ElectricEngine.java
+│               ├── Transmission.java (interface)
+│               ├── ManualTransmission.java
+│               ├── AutomaticTransmission.java
+│               ├── FuelTank.java
+│               ├── Vehicle.java
+│               └── Main.java
+└── README.md (optional)
+```
+
+#### Engine.java (interface)
+```java
+package com.example.vehicle;
+
+public interface Engine {
+    void start();
+    void stop();
+}
+```
+
+#### PetrolEngine.java
+```java
+package com.example.vehicle;
+
+public class PetrolEngine implements Engine {
+    @Override
+    public void start() {
+        System.out.println("Petrol engine roars to life!");
+    }
+
+    @Override
+    public void stop() {
+        System.out.println("Petrol engine sputters and stops.");
+    }
+}
+```
+
+#### ElectricEngine.java
+```java
+package com.example.vehicle;
+
+public class ElectricEngine implements Engine {
+    @Override
+    public void start() {
+        System.out.println("Electric motor hums quietly.");
+    }
+
+    @Override
+    public void stop() {
+        System.out.println("Electric motor goes silent.");
+    }
+}
+```
+
+#### Transmission.java (interface)
+```java
+package com.example.vehicle;
+
+public interface Transmission {
+    void shiftGear(int gear);
+}
+```
+
+#### ManualTransmission.java
+```java
+package com.example.vehicle;
+
+public class ManualTransmission implements Transmission {
+    @Override
+    public void shiftGear(int gear) {
+        System.out.println("Shifting manual transmission to gear " + gear);
+    }
+}
+```
+
+#### AutomaticTransmission.java
+```java
+package com.example.vehicle;
+
+public class AutomaticTransmission implements Transmission {
+    @Override
+    public void shiftGear(int gear) {
+        System.out.println("Automatic transmission smoothly changes to gear " + gear);
+    }
+}
+```
+
+#### FuelTank.java (simple class)
+```java
+package com.example.vehicle;
+
+public class FuelTank {
+    private int fuelLevel; // percentage
+
+    public FuelTank(int initialLevel) {
+        this.fuelLevel = initialLevel;
+    }
+
+    public void consumeFuel(int amount) {
+        if (fuelLevel >= amount) {
+            fuelLevel -= amount;
+            System.out.println("Fuel consumed. Remaining: " + fuelLevel + "%");
+        } else {
+            System.out.println("Not enough fuel!");
+        }
+    }
+
+    public int getFuelLevel() { return fuelLevel; }
+}
+```
+
+#### Vehicle.java (composes all parts)
+```java
+package com.example.vehicle;
+
+public class Vehicle {
+    private String model;
+    private Engine engine;
+    private Transmission transmission;
+    private FuelTank fuelTank;
+
+    public Vehicle(String model, Engine engine, Transmission transmission, FuelTank fuelTank) {
+        this.model = model;
+        this.engine = engine;
+        this.transmission = transmission;
+        this.fuelTank = fuelTank;
+    }
+
+    public void start() {
+        if (fuelTank.getFuelLevel() > 0) {
+            engine.start();
+        } else {
+            System.out.println("Cannot start: no fuel!");
+        }
+    }
+
+    public void stop() {
+        engine.stop();
+    }
+
+    public void drive() {
+        start();
+        transmission.shiftGear(1);
+        System.out.println(model + " is moving...");
+        fuelTank.consumeFuel(10);
+        stop();
+    }
+
+    // Setters to swap components at runtime
+    public void setEngine(Engine engine) { this.engine = engine; }
+    public void setTransmission(Transmission transmission) { this.transmission = transmission; }
+}
+```
+
+#### Main.java
+```java
+package com.example.vehicle;
+
+public class Main {
     public static void main(String[] args) {
-        // Create a car with a petrol engine
-        Car petrolCar = new Car(new PetrolEngine());
-        petrolCar.startCar();
+        // Build a petrol car with manual transmission
+        Engine petrol = new PetrolEngine();
+        Transmission manual = new ManualTransmission();
+        FuelTank tank = new FuelTank(100);
 
-        // Create a car with an electric engine
-        Car electricCar = new Car(new ElectricEngine());
-        electricCar.startCar();
+        Vehicle myCar = new Vehicle("Toyota Corolla", petrol, manual, tank);
+        myCar.drive();
 
-        // Swap engine on the petrol car (make it hybrid? :)
-        petrolCar.setEngine(new ElectricEngine());
-        petrolCar.startCar();
+        System.out.println("\n--- Swapping to electric engine and automatic transmission ---");
+        // Swap engine and transmission at runtime
+        myCar.setEngine(new ElectricEngine());
+        myCar.setTransmission(new AutomaticTransmission());
+        myCar.drive();
     }
 }
 ```
 
 **Output:**
 ```
-Petrol engine started.
-Electric engine started (silent).
-Swapping engine...
-Electric engine started (silent).
+Petrol engine roars to life!
+Shifting manual transmission to gear 1
+Toyota Corolla is moving...
+Fuel consumed. Remaining: 90%
+Petrol engine sputters and stops.
+
+--- Swapping to electric engine and automatic transmission ---
+Electric motor hums quietly.
+Automatic transmission smoothly changes to gear 1
+Toyota Corolla is moving...
+Fuel consumed. Remaining: 80%
+Electric motor goes silent.
 ```
 
-### Why This is Better Than Inheritance
+**Observations:**
+- `Vehicle` is composed of interchangeable parts. We can change engine or transmission at runtime without modifying `Vehicle` code.
+- This design is extensible: we can add a `HydrogenEngine` later without touching existing classes (just implement `Engine`).
+- Each component has a single responsibility.
 
-- **No forced IS‑A relationship**: `Car` is not an `Engine`, it simply uses one.
-- **Runtime flexibility**: We can change the engine of a `Car` object dynamically.
-- **Open/Closed Principle**: Adding a new engine type (e.g., `HybridEngine`) requires no changes to `Car` – just implement the `Engine` interface.
-- **Testability**: You can pass a mock engine to `Car` during testing.
+---
 
-### Key Takeaways
+### 10. Practice Exercise
 
-- **Inheritance** should be used for genuine IS‑A relationships (e.g., `Dog extends Animal`).
-- **Composition** (HAS‑A) is preferred for most other cases, especially when behavior can vary or needs to be changed at runtime.
-- By depending on interfaces (abstractions) rather than concrete classes, you create loosely coupled, maintainable designs.
-- This principle is at the heart of many design patterns: Strategy, Decorator, Bridge, etc.
+1. Add a new engine type: `DieselEngine` (implements `Engine`).
+2. Add a new transmission type: `CVTTransmission` (implements `Transmission`).
+3. Create a `Motorcycle` class that also uses composition with `Engine` and `Transmission` (no fuel tank? maybe a simpler version).
+4. Modify `Vehicle` to include a `List<Tire>` (composition with a collection). Tire class could have pressure, etc.
+5. Think of a scenario where inheritance would be more appropriate than composition (e.g., `SavingsAccount` extends `BankAccount`). Implement it and explain your reasoning.
 
-Always ask yourself: *"Is this truly an IS‑A relationship?"* If the answer is no, choose composition instead. This simple rule will dramatically improve your low-level design skills.
+---
+
+### 11. Key Takeaways
+
+- **Favor composition over inheritance** is a principle, not an absolute rule. Use composition when you need flexibility and low coupling.
+- Composition models **HAS-A** relationships; inheritance models **IS-A**.
+- Composition allows behavior to be changed at runtime (via setter injection) and promotes code reuse through delegation.
+- Inheritance is appropriate for stable, genuinely hierarchical relationships, but avoid deep hierarchies.
+- Design patterns like Strategy, Decorator, and Composite are based on composition.
+
+Mastering this concept will dramatically improve your LLD skills. Tomorrow we'll apply composition to implement the **Strategy pattern**, which we've been building toward all week.
